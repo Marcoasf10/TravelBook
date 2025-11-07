@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "190070618193",
+    "project_id": "travelbook-85805",
+    "storage_bucket": "travelbook-85805.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:190070618193:android:2b974f9db094cf9db5e070",
+        "android_client_info": {
+          "package_name": "pt.ipleiria.travelbook"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDo-hFvnbrpxPct1LR346N1EVyO-NW60XA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

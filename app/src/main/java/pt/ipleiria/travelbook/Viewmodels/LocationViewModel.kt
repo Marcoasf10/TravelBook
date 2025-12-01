@@ -20,6 +20,8 @@ import pt.ipleiria.travelbook.Models.Location
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import pt.ipleiria.travelbook.Repositories.LocationRepository
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 class LocationViewModel(
     private val repo: LocationRepository = LocationRepository()
@@ -107,6 +109,38 @@ class LocationViewModel(
             Log.e("AI", "AI generation failed", e)
             "Ai failed generation suggestions, try again"
         }
+    }
+
+    fun getOneSuggestion(location: String, country: String?, startDate: Long?, endDate: Long?) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val dateFormatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                val startText = startDate?.let { dateFormatter.format(it) }
+                val endText = endDate?.let { dateFormatter.format(it) }
+
+                val suggestionText = fetchSingleSuggestion(location, country, startText, endText)
+
+                aiSuggestions = listOf(suggestionText) // For screen, you can expose directly the item
+                Log.i("AI", "New suggestion: $suggestionText")
+
+            } catch (e: Exception) {
+                Log.e("AI", "Error fetching suggestion", e)
+            }
+        }
+    }
+
+    private suspend fun fetchSingleSuggestion(location: String, country: String?, startDateText: String?, endDateText: String?)
+        : String {
+        val prompt = """
+        Provide exactly ONE short travel activity suggestion for $location 
+        ${if (!country.isNullOrBlank()) ", $country" else ""}.
+        It must be a single bullet-style short phrase (no more than 10 words).
+        Do not output a list, only one suggestion.
+        No extra text.
+    """.trimIndent()
+
+        val response = generativeModel().generateContent(prompt = prompt)
+        return response.text.orEmpty().removePrefix("•").trim()
     }
 
     fun getSuggestionsFor(location: String, country: String? = null, startDate: Long? = null, endDate: Long? = null) {

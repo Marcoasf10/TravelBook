@@ -1,17 +1,20 @@
 package pt.ipleiria.travelbook.ui.theme
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import pt.ipleiria.travelbook.Models.Location
-import pt.ipleiria.travelbook.Models.LocationStatus
 import pt.ipleiria.travelbook.Viewmodels.LocationViewModel
+import pt.ipleiria.travelbook.components.DatePickerDialogs
+import pt.ipleiria.travelbook.components.DateRangePickerRow
+import pt.ipleiria.travelbook.components.DraggableNote
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -20,7 +23,7 @@ import java.util.*
 fun CreateScreen(viewModel: LocationViewModel, navController: NavController) {
     var name by remember { mutableStateOf("") }
     var country by remember { mutableStateOf("") }
-    var notes by remember { mutableStateOf("") }
+    val notes = remember { mutableStateListOf<String>() }
 
     var startDate by remember { mutableStateOf<Long?>(null) }
     var endDate by remember { mutableStateOf<Long?>(null) }
@@ -36,7 +39,7 @@ fun CreateScreen(viewModel: LocationViewModel, navController: NavController) {
     LaunchedEffect(viewModel.aiSuggestions) {
         if (viewModel.aiSuggestions.isNotEmpty()) {
             isAiLoading = false
-            notes = viewModel.aiSuggestions.joinToString(separator = "\n")
+            notes.add(viewModel.aiSuggestions.first())
         }
     }
 
@@ -59,6 +62,7 @@ fun CreateScreen(viewModel: LocationViewModel, navController: NavController) {
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
 
+            // --- Name ---
             OutlinedTextField(
                 value = name,
                 onValueChange = {
@@ -69,7 +73,6 @@ fun CreateScreen(viewModel: LocationViewModel, navController: NavController) {
                 modifier = Modifier.fillMaxWidth(),
                 isError = showNameWarning
             )
-
             if (showNameWarning) {
                 Text(
                     text = "Please enter a location name first",
@@ -86,107 +89,49 @@ fun CreateScreen(viewModel: LocationViewModel, navController: NavController) {
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Box(modifier = Modifier.fillMaxWidth()) {
-                OutlinedTextField(
-                    value = if (isAiLoading) "" else notes,
-                    onValueChange = { notes = it },
-                    label = { Text("Notes (AI suggestions will appear here)") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(160.dp),
-                    enabled = !isAiLoading,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            Spacer(modifier = Modifier.height(8.dp))
+
+            DateRangePickerRow(
+                startDate = startDate,
+                endDate = endDate,
+                onStartClick = { showStartPicker = true },
+                onEndClick = { showEndPicker = true }
+            )
+
+            DatePickerDialogs(
+                showStartPicker = showStartPicker,
+                showEndPicker = showEndPicker,
+                startDate = startDate,
+                endDate = endDate,
+                onStartDismiss = { showStartPicker = false },
+                onEndDismiss = { showEndPicker = false },
+                onStartSelected = { startDate = it },
+                onEndSelected = { endDate = it }
+            )
+
+            Column {
+                notes.forEachIndexed { index, note ->
+                    DraggableNote(
+                        note = note,
+                        notes = notes,
+                        onValueChange = { newText -> notes[index] = newText },
+                        onRemove = { notes.removeAt(index) }
                     )
-                )
-
-                if (isAiLoading) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Generating AI suggestions...", style = MaterialTheme.typography.bodyMedium)
-                    }
-                }
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Start Date: ${startDate?.let { dateFormatter.format(it) } ?: "Not set"}")
-                TextButton(onClick = { showStartPicker = true }) {
-                    Text("Pick")
-                }
-            }
-
-            if (showStartPicker) {
-                val datePickerState = rememberDatePickerState(
-                    initialSelectedDateMillis = startDate ?: System.currentTimeMillis()
-                )
-                DatePickerDialog(
-                    onDismissRequest = { showStartPicker = false },
-                    confirmButton = {
-                        TextButton(onClick = {
-                            startDate = datePickerState.selectedDateMillis
-                            showStartPicker = false
-                        }) {
-                            Text("OK")
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { showStartPicker = false }) {
-                            Text("Cancel")
-                        }
-                    }
-                ) {
-                    DatePicker(state = datePickerState)
-                }
-            }
-
-            // --- End Date Picker ---
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("End Date: ${endDate?.let { dateFormatter.format(it) } ?: "Not set"}")
-                TextButton(onClick = { showEndPicker = true }) {
-                    Text("Pick")
-                }
-            }
-
-            if (showEndPicker) {
-                val datePickerState = rememberDatePickerState(
-                    initialSelectedDateMillis = endDate ?: System.currentTimeMillis()
-                )
-                DatePickerDialog(
-                    onDismissRequest = { showEndPicker = false },
-                    confirmButton = {
-                        TextButton(onClick = {
-                            endDate = datePickerState.selectedDateMillis
-                            showEndPicker = false
-                        }) {
-                            Text("OK")
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { showEndPicker = false }) {
-                            Text("Cancel")
-                        }
-                    }
-                ) {
-                    DatePicker(state = datePickerState)
                 }
             }
 
             Spacer(modifier = Modifier.height(8.dp))
+
+            OutlinedButton(
+                onClick = {
+                    if (name.isNotBlank()) {
+                        isAiLoading = true
+                        viewModel.getOneSuggestion(name, country, startDate, endDate)
+                    } else showNameWarning = true
+                }
+            ) {
+                Text("+ Add AI suggestion")
+            }
 
             Button(
                 onClick = {
@@ -194,7 +139,6 @@ fun CreateScreen(viewModel: LocationViewModel, navController: NavController) {
                         showNameWarning = true
                         return@Button
                     }
-
                     val location = Location(
                         name = name,
                         country = country,
@@ -202,28 +146,12 @@ fun CreateScreen(viewModel: LocationViewModel, navController: NavController) {
                         startDate = startDate,
                         endDate = endDate
                     )
-
                     viewModel.addLocation(location)
                     navController.popBackStack()
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Save")
-            }
-
-            OutlinedButton(
-                onClick = {
-                    if (name.isNotBlank()) {
-                        isAiLoading = true
-                        notes = ""
-                        viewModel.getSuggestionsFor(name, country, startDate, endDate)
-                    } else {
-                        showNameWarning = true
-                    }
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Suggest activities")
             }
         }
     }

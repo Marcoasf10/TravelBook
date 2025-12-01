@@ -12,11 +12,13 @@ import androidx.navigation.NavController
 import pt.ipleiria.travelbook.Models.Location
 import pt.ipleiria.travelbook.Models.LocationStatus
 import pt.ipleiria.travelbook.Viewmodels.LocationViewModel
+import pt.ipleiria.travelbook.components.DatePickerDialogs
+import pt.ipleiria.travelbook.components.DateRangePickerRow
+import pt.ipleiria.travelbook.components.DraggableNote
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditScreen(viewModel: LocationViewModel, navController: NavController, locationId: String) {
-    val scope = rememberCoroutineScope()
     var location by remember { mutableStateOf<Location?>(null) }
 
     LaunchedEffect(locationId) {
@@ -32,7 +34,7 @@ fun EditScreen(viewModel: LocationViewModel, navController: NavController, locat
 
     var name by remember { mutableStateOf(location!!.name) }
     var country by remember { mutableStateOf(location!!.country) }
-    var notes by remember { mutableStateOf(location!!.notes) }
+    var notes by remember { mutableStateOf(location!!.notes.toMutableList()) }
     var status by remember { mutableStateOf(location!!.status) }
     var startDate by remember { mutableStateOf(location!!.startDate) }
     var endDate by remember { mutableStateOf(location!!.endDate) }
@@ -59,87 +61,60 @@ fun EditScreen(viewModel: LocationViewModel, navController: NavController, locat
             )
         }
     ) { inner ->
-        Column(modifier = Modifier.padding(inner).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Name") }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(value = country, onValueChange = { country = it }, label = { Text("Country") }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(value = notes, onValueChange = { notes = it }, label = { Text("Notes") }, modifier = Modifier
-                .fillMaxWidth()
-                .height(120.dp))
+        Column(
+            modifier = Modifier.padding(inner).padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // --- Name / Country Inputs ---
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text("Name") },
+                modifier = Modifier.fillMaxWidth()
+            )
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Start Date: ${startDate?.let { dateFormatter.format(it) } ?: "Not set"}")
-                TextButton(onClick = { showStartPicker = true }) {
-                    Text("Pick")
+            OutlinedTextField(
+                value = country,
+                onValueChange = { country = it },
+                label = { Text("Country") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            DateRangePickerRow(
+                startDate = startDate,
+                endDate = endDate,
+                onStartClick = { showStartPicker = true },
+                onEndClick = { showEndPicker = true }
+            )
+
+            DatePickerDialogs(
+                showStartPicker = showStartPicker,
+                showEndPicker = showEndPicker,
+                startDate = startDate,
+                endDate = endDate,
+                onStartDismiss = { showStartPicker = false },
+                onEndDismiss = { showEndPicker = false },
+                onStartSelected = { startDate = it },
+                onEndSelected = { endDate = it }
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Column {
+                notes.forEachIndexed { index, note ->
+                    DraggableNote(
+                        note = note,
+                        notes = notes,
+                        onValueChange = { newText -> notes[index] = newText },
+                        onRemove = { notes.removeAt(index) }
+                    )
                 }
             }
 
-            if (showStartPicker) {
-                val datePickerState = rememberDatePickerState(
-                    initialSelectedDateMillis = startDate ?: System.currentTimeMillis()
-                )
-
-                DatePickerDialog(
-                    onDismissRequest = { showStartPicker = false },
-                    confirmButton = {
-                        TextButton(
-                            onClick = {
-                                startDate = datePickerState.selectedDateMillis
-                                showStartPicker = false
-                            }
-                        ) {
-                            Text("OK")
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { showStartPicker = false }) {
-                            Text("Cancel")
-                        }
-                    }
-                ) {
-                    DatePicker(state = datePickerState)
-                }
-            }
-
-            if (showEndPicker) {
-                val datePickerState = rememberDatePickerState(
-                    initialSelectedDateMillis = endDate ?: System.currentTimeMillis()
-                )
-
-                DatePickerDialog(
-                    onDismissRequest = { showEndPicker = false },
-                    confirmButton = {
-                        TextButton(
-                            onClick = {
-                                endDate = datePickerState.selectedDateMillis
-                                showEndPicker = false
-                            }
-                        ) {
-                            Text("OK")
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { showEndPicker = false }) {
-                            Text("Cancel")
-                        }
-                    }
-                ) {
-                    DatePicker(state = datePickerState)
-                }
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("End Date: ${endDate?.let { dateFormatter.format(it) } ?: "Not set"}")
-                TextButton(onClick = { showEndPicker = true }) {
-                    Text("Pick")
-                }
+            OutlinedButton(onClick = { notes.add("") }) {
+                Text("+ Add AI suggestion")
             }
 
             Row(
@@ -164,7 +139,7 @@ fun EditScreen(viewModel: LocationViewModel, navController: NavController, locat
                 )
             }
 
-
+            // --- Delete / Save Buttons ---
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedButton(
                     modifier = Modifier.weight(1f),
@@ -178,9 +153,14 @@ fun EditScreen(viewModel: LocationViewModel, navController: NavController, locat
                 Button(
                     modifier = Modifier.weight(1f),
                     onClick = {
-                        val updated = location!!.copy(name = name, country = country, notes = notes, status = status,
-                            startDate = startDate, endDate = endDate)
-
+                        val updated = location!!.copy(
+                            name = name,
+                            country = country,
+                            notes = notes,
+                            status = status,
+                            startDate = startDate,
+                            endDate = endDate
+                        )
                         viewModel.updateLocation(updated)
                         navController.popBackStack()
                     }

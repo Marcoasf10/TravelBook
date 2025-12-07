@@ -36,7 +36,7 @@ class LocationViewModel(
     var lastError by mutableStateOf<String?>(null)
         private set
 
-    var aiSuggestions by mutableStateOf<List<String>>(emptyList())
+    var aiSuggestion by mutableStateOf<String?>(null)
         private set
 
     private val _saved = MutableStateFlow(false)
@@ -44,6 +44,10 @@ class LocationViewModel(
 
     init {
         observeLocations()
+    }
+
+    fun clearAiSuggestion() {
+        aiSuggestion = null
     }
 
     private fun observeLocations() {
@@ -73,54 +77,16 @@ class LocationViewModel(
         return Firebase.ai().generativeModel("gemini-2.5-flash", config)
     }
 
-    private suspend fun fetchAiSuggestions(location: String, country: String?,
-                                           startDateText: String?, endDateText: String?): String {
-        val user = ensureUserSignedIn()
-        val token = user.getIdToken(true).await().token
-        
-        val prompt = """
-            You are an expert travel guide.
-            Generate a simple, concise bullet list (up to 5 items) of travel activities in $location 
-            ${if (!country.isNullOrBlank()) ", $country" else ""}.
-            ${if (!startDateText.isNullOrBlank()) "\nThe voyage starting date is $startDateText." else ""}.
-            ${if (!endDateText.isNullOrBlank()) "\nThe voyage ending date is $endDateText." else ""}.
-            ${if (!endDateText.isNullOrBlank() || !endDateText.isNullOrBlank()) "\nThe temporary gap shouldn't be " +
-                "limitative, only use if specific, worthy activities occur in these dates in $location" else ""}.
-            
-            The list should include key attractions, food, or cultural experiences.
-            Use only short phrases, names of places, foods, or activities — no extra descriptions.
-            
-            Each item should fit on one line.
-            
-            If "$location" is not a known or valid travel destination, reply only with:
-            ⚠️ No travel suggestions available for this location.
-            
-            Response should be in english no matter the location chosen.
-            Output only the bullet list or the warning message, nothing else.
-        """.trimIndent()
-
-        return try {
-            val response = generativeModel().generateContent(prompt = prompt)
-            response.text.orEmpty()
-        } catch (e: ResponseStoppedException) {
-            Log.e("AI", "AI generation failed", e)
-            "Ai response was too extensive, try again"
-        } catch (e: Exception) {
-            Log.e("AI", "AI generation failed", e)
-            "Ai failed generation suggestions, try again"
-        }
-    }
-
-    fun getOneSuggestion(location: String, country: String?, startDate: Long?, endDate: Long?) {
+    fun getSuggestion(location: String, country: String?, startDate: Long?, endDate: Long?, existingSuggestions: List<String> = emptyList()) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val dateFormatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
                 val startText = startDate?.let { dateFormatter.format(it) }
                 val endText = endDate?.let { dateFormatter.format(it) }
 
-                val suggestionText = fetchSingleSuggestion(location, country, startText, endText)
+                val suggestionText = fetchSuggestion(location, country, startText, endText, existingSuggestions)
 
-                aiSuggestions = listOf(suggestionText) // For screen, you can expose directly the item
+                aiSuggestion = suggestionText
                 Log.i("AI", "New suggestion: $suggestionText")
 
             } catch (e: Exception) {
@@ -129,39 +95,35 @@ class LocationViewModel(
         }
     }
 
-    private suspend fun fetchSingleSuggestion(location: String, country: String?, startDateText: String?, endDateText: String?)
+    private suspend fun fetchSuggestion(location: String, country: String?, startDateText: String?, endDateText: String?,
+                                        existingSuggestions: List<String>)
         : String {
         val prompt = """
-        Provide exactly ONE short travel activity suggestion for $location 
-        ${if (!country.isNullOrBlank()) ", $country" else ""}.
-        It must be a single bullet-style short phrase (no more than 10 words).
-        Do not output a list, only one suggestion.
-        No extra text.
-    """.trimIndent()
+            You are an expert travel guide.
+            Provide exactly ONE short travel activity suggestion for $location 
+            ${if (!country.isNullOrBlank()) ", $country" else ""}.
+            ${if (!startDateText.isNullOrBlank()) "\nThe voyage starting date is $startDateText." else ""}.
+            ${if (!endDateText.isNullOrBlank()) "\nThe voyage ending date is $endDateText." else ""}.
+            ${if (!endDateText.isNullOrBlank() || !endDateText.isNullOrBlank()) "\nThe temporary gap shouldn't be " +
+                    "limitative, only use if specific, worthy activities occur in these dates in $location" else ""}.
+                    
+            The suggestion may be a key attraction, food or cultural experience.
+            Use only short phrases, names of places, foods, or activities — no extra descriptions.
+            It must be a single bullet-style short phrase (no more than 10 words).
+            
+            ${if (existingSuggestions.isNotEmpty()) "\nDo NOT suggest one of the following suggestions: " +
+                existingSuggestions.joinToString(", ") else ""}
+            
+            If "$location" is not a known or valid travel destination, reply only with:
+            ⚠️ No travel suggestions available for this location.
+            
+            Do not output a list, only one suggestion.
+            No extra text.
+        """.trimIndent()
 
         val response = generativeModel().generateContent(prompt = prompt)
-        return response.text.orEmpty().removePrefix("•").trim()
-    }
 
-    fun getSuggestionsFor(location: String, country: String? = null, startDate: Long? = null, endDate: Long? = null) {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val dateFormatter = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
-                val startText = startDate?.let { dateFormatter.format(it) }
-                val endText = endDate?.let { dateFormatter.format(it) }
-
-                val suggestionsText = fetchAiSuggestions(location, country, startText, endText)
-                val suggestionsList = suggestionsText
-                    .split("\n")
-                    .filter { it.isNotBlank() }
-                    .map { it.removePrefix("•").trim() }
-
-                aiSuggestions = suggestionsList
-                Log.i("AI", "✅ Suggestions: $suggestionsList")
-            } catch (e: Exception) {
-                Log.e("AI", "Error fetching suggestions", e)
-            }
-        }
+        return response.text?.trim() ?: """⚠️ No travel suggestions available for this location."""
     }
 
     fun addLocation(location: Location) {

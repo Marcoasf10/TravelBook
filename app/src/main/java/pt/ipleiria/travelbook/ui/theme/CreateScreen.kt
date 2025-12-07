@@ -33,11 +33,12 @@ fun CreateScreen(viewModel: LocationViewModel, navController: NavController) {
     var isAiLoading by remember { mutableStateOf(false) }
     var showNameWarning by remember { mutableStateOf(false) }
 
-    LaunchedEffect(viewModel.aiSuggestions) {
-        if (viewModel.aiSuggestions.isNotEmpty()) {
-            isAiLoading = false
-            notes.add(viewModel.aiSuggestions.first())
+    LaunchedEffect(viewModel.aiSuggestion) {
+        if (!viewModel.aiSuggestion.isNullOrEmpty()) {
+            notes.add(viewModel.aiSuggestion!!)
         }
+        isAiLoading = false
+        viewModel.clearAiSuggestion()
     }
 
     Scaffold(
@@ -130,7 +131,7 @@ fun CreateScreen(viewModel: LocationViewModel, navController: NavController) {
                     onClick = {
                         if (name.isNotBlank()) {
                             isAiLoading = true
-                            viewModel.getOneSuggestion(name, country, startDate, endDate)
+                            viewModel.getSuggestion(name, country, startDate, endDate, notes)
                         } else showNameWarning = true
                     }
                 ) {

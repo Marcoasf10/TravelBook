@@ -1,10 +1,9 @@
 package pt.ipleiria.travelbook.ui.theme
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -15,8 +14,8 @@ import pt.ipleiria.travelbook.Viewmodels.LocationViewModel
 import pt.ipleiria.travelbook.components.DatePickerDialogs
 import pt.ipleiria.travelbook.components.DateRangePickerRow
 import pt.ipleiria.travelbook.components.DraggableNote
-import java.text.SimpleDateFormat
-import java.util.*
+import pt.ipleiria.travelbook.components.LoadingOverlay
+import pt.ipleiria.travelbook.components.LocationMap
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,8 +32,6 @@ fun CreateScreen(viewModel: LocationViewModel, navController: NavController) {
 
     var isAiLoading by remember { mutableStateOf(false) }
     var showNameWarning by remember { mutableStateOf(false) }
-
-    val dateFormatter = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
 
     LaunchedEffect(viewModel.aiSuggestions) {
         if (viewModel.aiSuggestions.isNotEmpty()) {
@@ -54,104 +51,121 @@ fun CreateScreen(viewModel: LocationViewModel, navController: NavController) {
                 }
             )
         }
-    ) { inner ->
-        Column(
+    ) { innerPadding ->
+        LazyColumn(
             modifier = Modifier
-                .padding(inner)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(innerPadding)
+                .fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(16.dp)
         ) {
 
-            // --- Name ---
-            OutlinedTextField(
-                value = name,
-                onValueChange = {
-                    name = it
-                    if (showNameWarning && it.isNotBlank()) showNameWarning = false
-                },
-                label = { Text("Name") },
-                modifier = Modifier.fillMaxWidth(),
-                isError = showNameWarning
-            )
-            if (showNameWarning) {
-                Text(
-                    text = "Please enter a location name first",
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(start = 4.dp)
+            item {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = {
+                        name = it
+                        if (showNameWarning && it.isNotBlank()) showNameWarning = false
+                    },
+                    label = { Text("Name") },
+                    modifier = Modifier.fillMaxWidth(),
+                    isError = showNameWarning
                 )
             }
 
-            OutlinedTextField(
-                value = country,
-                onValueChange = { country = it },
-                label = { Text("Country") },
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            DateRangePickerRow(
-                startDate = startDate,
-                endDate = endDate,
-                onStartClick = { showStartPicker = true },
-                onEndClick = { showEndPicker = true }
-            )
-
-            DatePickerDialogs(
-                showStartPicker = showStartPicker,
-                showEndPicker = showEndPicker,
-                startDate = startDate,
-                endDate = endDate,
-                onStartDismiss = { showStartPicker = false },
-                onEndDismiss = { showEndPicker = false },
-                onStartSelected = { startDate = it },
-                onEndSelected = { endDate = it }
-            )
-
-            Column {
-                notes.forEachIndexed { index, note ->
-                    DraggableNote(
-                        note = note,
-                        notes = notes,
-                        onValueChange = { newText -> notes[index] = newText },
-                        onRemove = { notes.removeAt(index) }
+            item {
+                if (showNameWarning) {
+                    Text(
+                        text = "Please enter a location name first",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(start = 4.dp)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            OutlinedButton(
-                onClick = {
-                    if (name.isNotBlank()) {
-                        isAiLoading = true
-                        viewModel.getOneSuggestion(name, country, startDate, endDate)
-                    } else showNameWarning = true
-                }
-            ) {
-                Text("+ Add AI suggestion")
+            item {
+                OutlinedTextField(
+                    value = country,
+                    onValueChange = { country = it },
+                    label = { Text("Country") },
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
 
-            Button(
-                onClick = {
-                    if (name.isBlank()) {
-                        showNameWarning = true
-                        return@Button
+            item {
+                DateRangePickerRow(
+                    startDate = startDate,
+                    endDate = endDate,
+                    onStartClick = { showStartPicker = true },
+                    onEndClick = { showEndPicker = true }
+                )
+            }
+
+            item {
+                DatePickerDialogs(
+                    showStartPicker = showStartPicker,
+                    showEndPicker = showEndPicker,
+                    startDate = startDate,
+                    endDate = endDate,
+                    onStartDismiss = { showStartPicker = false },
+                    onEndDismiss = { showEndPicker = false },
+                    onStartSelected = { startDate = it },
+                    onEndSelected = { endDate = it }
+                )
+            }
+
+            items(notes.size) { index ->
+                DraggableNote(
+                    note = notes[index],
+                    notes = notes,
+                    onValueChange = { newText -> notes[index] = newText },
+                    onRemove = { notes.removeAt(index) }
+                )
+            }
+
+            item {
+                LoadingOverlay(isLoading = isAiLoading)
+                OutlinedButton(
+                    onClick = {
+                        if (name.isNotBlank()) {
+                            isAiLoading = true
+                            viewModel.getOneSuggestion(name, country, startDate, endDate)
+                        } else showNameWarning = true
                     }
-                    val location = Location(
-                        name = name,
-                        country = country,
-                        notes = notes,
-                        startDate = startDate,
-                        endDate = endDate
-                    )
-                    viewModel.addLocation(location)
-                    navController.popBackStack()
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Save")
+                ) {
+                    Text("+ Add AI suggestion")
+                }
+            }
+
+            item {
+                LocationMap(
+                    locationName = name,
+                    country = country
+                )
+            }
+
+            item {
+                Button(
+                    onClick = {
+                        if (name.isBlank()) {
+                            showNameWarning = true
+                            return@Button
+                        }
+                        val location = Location(
+                            name = name,
+                            country = country,
+                            notes = notes,
+                            startDate = startDate,
+                            endDate = endDate
+                        )
+                        viewModel.addLocation(location)
+                        navController.popBackStack()
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Save")
+                }
             }
         }
     }

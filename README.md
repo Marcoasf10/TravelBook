@@ -24,7 +24,7 @@ Follow these steps to set up the project locally:
 
 1. **Clone the repository**:  
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/Marcoasf10/TravelBook.git
    cd TravelBook
 
 2. **Open in Android Studio**:  
@@ -37,7 +37,7 @@ Follow these steps to set up the project locally:
 - Download the google-services.json file and place it in the app/ directory.
 
 4. **Configure Google Maps**:
-- Create an account in "Google for Developers" if you don't have one already. Generate an API key with "Maps JavaScript API".
+- Create an account in `Google for Developers` if you don't have one already. Generate an API key with `Maps JavaScript API`.
 - Create a secrets.properties file under root with the entry: "MAPS_API_KEY={YOUR_API_KEY}"
 
 5. **Run the app**:

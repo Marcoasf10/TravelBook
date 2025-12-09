@@ -1,6 +1,6 @@
 # TravelBook
 
-**TravelBook** is a mobile application designed to help travelers plan, document, and enhance their travel experiences. The app combines intuitive location tracking, notes management, and smart suggestions to make trip planning and journaling seamless.  
+**TravelBook** is a kotlin mobile application designed to help travelers plan, document, and enhance their travel experiences. The app combines intuitive location tracking, notes management, and smart suggestions to make trip planning and journaling seamless.  
 
 ## Key Features
 

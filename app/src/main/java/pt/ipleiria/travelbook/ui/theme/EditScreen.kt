@@ -197,10 +197,7 @@ fun EditScreen(viewModel: LocationViewModel, navController: NavController, locat
                 ) {
                     OutlinedButton(
                         modifier = Modifier.weight(1f),
-                        onClick = {
-                            viewModel.deleteLocation(locationId)
-                            navController.popBackStack()
-                        }
+                        onClick = { showDeleteLocationDialog = true }
                     ) {
                         Text("Delete")
                     }

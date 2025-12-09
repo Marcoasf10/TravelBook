@@ -9,16 +9,10 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.Firebase
 import com.google.firebase.ai.GenerativeModel
 import com.google.firebase.ai.ai
-import com.google.firebase.ai.type.ResponseStoppedException
 import com.google.firebase.ai.type.generationConfig
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseUser
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import pt.ipleiria.travelbook.Models.Location
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
 import pt.ipleiria.travelbook.Repositories.LocationRepository
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -39,9 +33,6 @@ class LocationViewModel(
     var aiSuggestion by mutableStateOf<String?>(null)
         private set
 
-    private val _saved = MutableStateFlow(false)
-    val saved: StateFlow<Boolean> = _saved
-
     init {
         observeLocations()
     }
@@ -58,12 +49,6 @@ class LocationViewModel(
                 isLoading = false
             }
         )
-    }
-
-    private suspend fun ensureUserSignedIn(): FirebaseUser {
-        val auth = FirebaseAuth.getInstance()
-        return auth.currentUser ?: auth.signInAnonymously().await().user
-        ?: throw Exception("Anonymous sign-in failed")
     }
 
     fun generativeModel() : GenerativeModel {
@@ -90,6 +75,7 @@ class LocationViewModel(
                 Log.i("AI", "New suggestion: $suggestionText")
 
             } catch (e: Exception) {
+                aiSuggestion = "An error occurred with AI integration"
                 Log.e("AI", "Error fetching suggestion", e)
             }
         }

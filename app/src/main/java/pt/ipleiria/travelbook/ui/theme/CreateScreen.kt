@@ -4,8 +4,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -13,7 +15,6 @@ import pt.ipleiria.travelbook.Models.Location
 import pt.ipleiria.travelbook.Viewmodels.LocationViewModel
 import pt.ipleiria.travelbook.components.DatePickerDialogs
 import pt.ipleiria.travelbook.components.DateRangePickerRow
-import pt.ipleiria.travelbook.components.DraggableNote
 import pt.ipleiria.travelbook.components.LoadingOverlay
 import pt.ipleiria.travelbook.components.LocationMap
 
@@ -32,6 +33,7 @@ fun CreateScreen(viewModel: LocationViewModel, navController: NavController) {
 
     var isAiLoading by remember { mutableStateOf(false) }
     var showNameWarning by remember { mutableStateOf(false) }
+    var invalidDates by remember { mutableStateOf(false) }
 
     LaunchedEffect(viewModel.aiSuggestion) {
         if (!viewModel.aiSuggestion.isNullOrEmpty()) {
@@ -99,7 +101,8 @@ fun CreateScreen(viewModel: LocationViewModel, navController: NavController) {
                     startDate = startDate,
                     endDate = endDate,
                     onStartClick = { showStartPicker = true },
-                    onEndClick = { showEndPicker = true }
+                    onEndClick = { showEndPicker = true },
+                    invalidDates = invalidDates
                 )
             }
 
@@ -117,12 +120,21 @@ fun CreateScreen(viewModel: LocationViewModel, navController: NavController) {
             }
 
             items(notes.size) { index ->
-                DraggableNote(
-                    note = notes[index],
-                    notes = notes,
-                    onValueChange = { newText -> notes[index] = newText },
-                    onRemove = { notes.removeAt(index) }
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                ) {
+                    OutlinedTextField(
+                        value = notes[index],
+                        onValueChange = { newText -> notes[index] = newText },
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(onClick = { notes.removeAt(index) }) {
+                        Icon(Icons.Default.Delete, contentDescription = "Remove")
+                    }
+                }
             }
 
             item {
@@ -133,7 +145,8 @@ fun CreateScreen(viewModel: LocationViewModel, navController: NavController) {
                             isAiLoading = true
                             viewModel.getSuggestion(name, country, startDate, endDate, notes)
                         } else showNameWarning = true
-                    }
+                    },
+                    enabled = !isAiLoading
                 ) {
                     Text("+ Add AI suggestion")
                 }
@@ -153,6 +166,12 @@ fun CreateScreen(viewModel: LocationViewModel, navController: NavController) {
                             showNameWarning = true
                             return@Button
                         }
+
+                        if (startDate != null && endDate != null && startDate!! > endDate!!) {
+                            invalidDates = true
+                            return@Button
+                        }
+
                         val location = Location(
                             name = name,
                             country = country,

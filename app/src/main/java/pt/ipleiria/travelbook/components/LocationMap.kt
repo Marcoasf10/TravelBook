@@ -19,7 +19,7 @@ import com.google.maps.android.compose.rememberCameraPositionState
 import com.google.maps.android.compose.rememberMarkerState
 
 @Composable
-fun LocationMap(locationName: String, country: String = "") {
+fun LocationMap(locationName: String, country: String = "", onMapLoaded: (() -> Unit)? = null) {
     val context = LocalContext.current
     val geocoder = remember { Geocoder(context) }
 
@@ -28,6 +28,7 @@ fun LocationMap(locationName: String, country: String = "") {
 
     val cameraPositionState = rememberCameraPositionState()
     val markerState = rememberMarkerState()
+    var isMapLoading by remember { mutableStateOf(true) }
 
     LaunchedEffect(locationName, country) {
         if (locationName.isBlank()) {
@@ -65,7 +66,8 @@ fun LocationMap(locationName: String, country: String = "") {
     Box(modifier = Modifier.height(300.dp)) {
         GoogleMap(
             modifier = Modifier.fillMaxSize(),
-            cameraPositionState = cameraPositionState
+            cameraPositionState = cameraPositionState,
+            onMapLoaded = { isMapLoading = false}
         ) {
             if (!notFound) {
                 Marker(
@@ -76,7 +78,7 @@ fun LocationMap(locationName: String, country: String = "") {
             }
         }
 
-        LoadingOverlay(isLoading = isSearching)
+        LoadingOverlay(isLoading = isSearching || isMapLoading)
 
         if (notFound && !isSearching) {
             Box(

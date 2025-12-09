@@ -9,16 +9,6 @@ class LocationRepository(
 ) {
     private val collection = firestore.collection("locations")
 
-    suspend fun getAllLocations(): List<Location> {
-        val snap = collection.get().await()
-        return snap.documents.mapNotNull { it.toObject(Location::class.java) }
-    }
-
-    suspend fun getLocation(id: String): Location? {
-        val snap = collection.document(id).get().await()
-        return snap.toObject(Location::class.java)
-    }
-
     suspend fun addLocation(location: Location) {
         collection.document(location.id).set(location).await()
     }

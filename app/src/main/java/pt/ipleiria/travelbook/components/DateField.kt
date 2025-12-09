@@ -11,8 +11,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import java.text.SimpleDateFormat
-import java.util.Locale
 
 @Composable
 fun DateField(
@@ -21,24 +19,23 @@ fun DateField(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val formatter = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
+    val formatter = remember { java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()) }
     val value = date?.let { formatter.format(it) } ?: ""
 
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable { onClick() }
-    ) {
+    Box(modifier = modifier.fillMaxWidth()) {
         OutlinedTextField(
             value = value,
             onValueChange = {},
             readOnly = true,
-            enabled = false,
             label = { Text(label) },
-            trailingIcon = {
-                Icon(Icons.Default.DateRange, contentDescription = "Pick date")
-            },
+            trailingIcon = { Icon(Icons.Default.DateRange, contentDescription = "Pick date") },
             modifier = Modifier.fillMaxWidth()
+        )
+
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .clickable { onClick() }
         )
     }
 }

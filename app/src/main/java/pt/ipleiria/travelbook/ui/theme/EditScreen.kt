@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,9 +16,9 @@ import pt.ipleiria.travelbook.Models.LocationStatus
 import pt.ipleiria.travelbook.Viewmodels.LocationViewModel
 import pt.ipleiria.travelbook.components.DatePickerDialogs
 import pt.ipleiria.travelbook.components.DateRangePickerRow
-import pt.ipleiria.travelbook.components.DraggableNote
 import pt.ipleiria.travelbook.components.LocationMap
 import pt.ipleiria.travelbook.components.LoadingOverlay
+import pt.ipleiria.travelbook.components.ToggleStatus
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,6 +51,7 @@ fun EditScreen(viewModel: LocationViewModel, navController: NavController, locat
 
     var showNameWarning by remember { mutableStateOf(false) }
     var isAiLoading by remember { mutableStateOf(false) }
+    var invalidDates by remember { mutableStateOf(false) }
 
     LaunchedEffect(viewModel.aiSuggestion) {
         if (!viewModel.aiSuggestion.isNullOrEmpty()) {
@@ -120,7 +122,8 @@ fun EditScreen(viewModel: LocationViewModel, navController: NavController, locat
                     startDate = startDate,
                     endDate = endDate,
                     onStartClick = { showStartPicker = true },
-                    onEndClick = { showEndPicker = true }
+                    onEndClick = { showEndPicker = true },
+                    invalidDates = invalidDates
                 )
             }
 
@@ -138,12 +141,21 @@ fun EditScreen(viewModel: LocationViewModel, navController: NavController, locat
             }
 
             items(notes.size) { index ->
-                DraggableNote(
-                    note = notes[index],
-                    notes = notes,
-                    onValueChange = { newText -> notes[index] = newText },
-                    onRemove = { notes.removeAt(index) }
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                ) {
+                    OutlinedTextField(
+                        value = notes[index],
+                        onValueChange = { newText -> notes[index] = newText },
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(onClick = { notes.removeAt(index) }) {
+                        Icon(Icons.Default.Delete, contentDescription = "Remove")
+                    }
+                }
             }
 
             item {
@@ -154,7 +166,8 @@ fun EditScreen(viewModel: LocationViewModel, navController: NavController, locat
                             isAiLoading = true
                             viewModel.getSuggestion(name, country, startDate, endDate, notes)
                         } else showNameWarning = true
-                    }
+                    },
+                    enabled = !isAiLoading
                 ) {
                     Text("+ Add AI suggestion")
                 }
@@ -168,27 +181,10 @@ fun EditScreen(viewModel: LocationViewModel, navController: NavController, locat
             }
 
             item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "Status: ${if (status == LocationStatus.PLANNED) "Planned" else "Visited"}",
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                    Switch(
-                        checked = (status == LocationStatus.VISITED),
-                        onCheckedChange = {
-                            status = if (it) LocationStatus.VISITED else LocationStatus.PLANNED
-                        },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = MaterialTheme.colorScheme.primary
-                        )
-                    )
-                }
+                ToggleStatus(
+                    status = status,
+                    onStatusChange = { newStatus -> status = newStatus }
+                )
             }
 
             item {
@@ -208,6 +204,16 @@ fun EditScreen(viewModel: LocationViewModel, navController: NavController, locat
                     Button(
                         modifier = Modifier.weight(1f),
                         onClick = {
+                            if (name.isBlank()) {
+                                showNameWarning = true
+                                return@Button
+                            }
+
+                            if (startDate != null && endDate != null && startDate!! > endDate!!) {
+                                invalidDates = true
+                                return@Button
+                            }
+
                             val updated = location!!.copy(
                                 name = name,
                                 country = country,

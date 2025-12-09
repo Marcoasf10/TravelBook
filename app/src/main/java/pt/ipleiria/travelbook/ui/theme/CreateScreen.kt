@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import pt.ipleiria.travelbook.Models.Location
 import pt.ipleiria.travelbook.Viewmodels.LocationViewModel
+import pt.ipleiria.travelbook.components.ConfirmationDialog
 import pt.ipleiria.travelbook.components.DatePickerDialogs
 import pt.ipleiria.travelbook.components.DateRangePickerRow
 import pt.ipleiria.travelbook.components.LoadingOverlay
@@ -34,6 +35,7 @@ fun CreateScreen(viewModel: LocationViewModel, navController: NavController) {
     var isAiLoading by remember { mutableStateOf(false) }
     var showNameWarning by remember { mutableStateOf(false) }
     var invalidDates by remember { mutableStateOf(false) }
+    var noteToDeleteIndex by remember { mutableStateOf<Int?>(null) }
 
     LaunchedEffect(viewModel.aiSuggestion) {
         if (!viewModel.aiSuggestion.isNullOrEmpty()) {
@@ -131,7 +133,7 @@ fun CreateScreen(viewModel: LocationViewModel, navController: NavController) {
                         onValueChange = { newText -> notes[index] = newText },
                         modifier = Modifier.weight(1f)
                     )
-                    IconButton(onClick = { notes.removeAt(index) }) {
+                    IconButton(onClick = { noteToDeleteIndex = index }) {
                         Icon(Icons.Default.Delete, contentDescription = "Remove")
                     }
                 }
@@ -187,6 +189,16 @@ fun CreateScreen(viewModel: LocationViewModel, navController: NavController) {
                     Text("Save")
                 }
             }
+        }
+
+        noteToDeleteIndex?.let { index ->
+            ConfirmationDialog(
+                showDialog = true,
+                title = "Delete Note",
+                message = "Are you sure you want to delete this note?",
+                onConfirm = { notes.removeAt(index) },
+                onDismiss = { noteToDeleteIndex = null }
+            )
         }
     }
 }

@@ -1,5 +1,6 @@
 package pt.ipleiria.travelbook.ui.theme
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
@@ -12,8 +13,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import pt.ipleiria.travelbook.Models.Location
-import pt.ipleiria.travelbook.Models.LocationStatus
 import pt.ipleiria.travelbook.Viewmodels.LocationViewModel
+import pt.ipleiria.travelbook.components.ConfirmationDialog
 import pt.ipleiria.travelbook.components.DatePickerDialogs
 import pt.ipleiria.travelbook.components.DateRangePickerRow
 import pt.ipleiria.travelbook.components.LocationMap
@@ -41,7 +42,7 @@ fun EditScreen(viewModel: LocationViewModel, navController: NavController, locat
 
     var name by remember { mutableStateOf(location!!.name) }
     var country by remember { mutableStateOf(location!!.country) }
-    val notes = remember { mutableStateListOf<String>() }
+    val notes = remember { mutableStateListOf<String>().apply { addAll(location!!.notes) } }
     var status by remember { mutableStateOf(location!!.status) }
     var startDate by remember { mutableStateOf(location!!.startDate) }
     var endDate by remember { mutableStateOf(location!!.endDate) }
@@ -52,6 +53,8 @@ fun EditScreen(viewModel: LocationViewModel, navController: NavController, locat
     var showNameWarning by remember { mutableStateOf(false) }
     var isAiLoading by remember { mutableStateOf(false) }
     var invalidDates by remember { mutableStateOf(false) }
+    var showDeleteLocationDialog by remember { mutableStateOf(false) }
+    var noteToDeleteIndex by remember { mutableStateOf<Int?>(null) }
 
     LaunchedEffect(viewModel.aiSuggestion) {
         if (!viewModel.aiSuggestion.isNullOrEmpty()) {
@@ -152,7 +155,7 @@ fun EditScreen(viewModel: LocationViewModel, navController: NavController, locat
                         onValueChange = { newText -> notes[index] = newText },
                         modifier = Modifier.weight(1f)
                     )
-                    IconButton(onClick = { notes.removeAt(index) }) {
+                    IconButton(onClick = { noteToDeleteIndex = index }) {
                         Icon(Icons.Default.Delete, contentDescription = "Remove")
                     }
                 }
@@ -201,6 +204,18 @@ fun EditScreen(viewModel: LocationViewModel, navController: NavController, locat
                     ) {
                         Text("Delete")
                     }
+
+                    ConfirmationDialog(
+                        showDialog = showDeleteLocationDialog,
+                        title = "Delete Location",
+                        message = "Are you sure you want to delete this location?",
+                        onConfirm = {
+                            viewModel.deleteLocation(locationId)
+                            navController.popBackStack()
+                        },
+                        onDismiss = { showDeleteLocationDialog = false }
+                    )
+
                     Button(
                         modifier = Modifier.weight(1f),
                         onClick = {
@@ -230,6 +245,16 @@ fun EditScreen(viewModel: LocationViewModel, navController: NavController, locat
                     }
                 }
             }
+        }
+
+        noteToDeleteIndex?.let { index ->
+            ConfirmationDialog(
+                showDialog = true,
+                title = "Delete Note",
+                message = "Are you sure you want to delete this note?",
+                onConfirm = { notes.removeAt(index) },
+                onDismiss = { noteToDeleteIndex = null }
+            )
         }
     }
 }

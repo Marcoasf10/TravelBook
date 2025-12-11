@@ -141,16 +141,31 @@ fun CreateScreen(viewModel: LocationViewModel, navController: NavController) {
 
             item {
                 LoadingOverlay(isLoading = isAiLoading)
-                OutlinedButton(
-                    onClick = {
-                        if (name.isNotBlank()) {
-                            isAiLoading = true
-                            viewModel.getSuggestion(name, country, startDate, endDate, notes)
-                        } else showNameWarning = true
-                    },
-                    enabled = !isAiLoading
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("+ Add AI suggestion")
+                    OutlinedButton(
+                        onClick = { notes.add("") },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("+ Add note")
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            if (name.isNotBlank()) {
+                                isAiLoading = true
+                                viewModel.getSuggestion(name, country, startDate, endDate, notes)
+                            } else showNameWarning = true
+                        },
+                        enabled = !isAiLoading,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("+ Add AI suggestion")
+                    }
                 }
             }
 
